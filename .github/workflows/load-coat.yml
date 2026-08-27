@@ -10,9 +10,14 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Inject coat script
+      - name: Inject coat script with retry
         run: |
-          python - <<'PY'
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5 6 7 8; do
+            git fetch origin main
+            git reset --hard origin/main
+            python - <<'PY'
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
@@ -25,9 +30,18 @@ jobs:
                   s=s.replace('</body>', tag+'</body>')
               p.write_text(s,encoding='utf-8')
           PY
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html
-          git diff --cached --quiet || git commit -m 'Load gray coat'
-          git pull --rebase origin main
-          git push
+            git add index.html
+            if git diff --cached --quiet; then
+              echo 'Coat script is already loaded.'
+              exit 0
+            fi
+            git commit -m 'Load gray coat'
+            if git push origin HEAD:main; then
+              echo 'Coat script loaded successfully.'
+              exit 0
+            fi
+            echo "Push race on attempt $attempt; retrying..."
+            sleep 2
+          done
+          echo 'Could not update index.html after retries.'
+          exit 1
