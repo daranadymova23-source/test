@@ -1,4 +1,4 @@
-name: Load gray coat
+name: Load wardrobe item scripts
 on:
   workflow_dispatch:
   push:
@@ -10,7 +10,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Inject coat script with retry
+      - name: Inject wardrobe scripts
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
@@ -21,23 +21,27 @@ jobs:
           from pathlib import Path
           p=Path('index.html')
           s=p.read_text(encoding='utf-8')
-          tag='<script src="coat-item.js"></script>'
-          if tag not in s:
-              marker='<script src="wardrobe-editor-v2.js"></script>'
-              if marker in s:
-                  s=s.replace(marker, marker+tag)
-              else:
-                  s=s.replace('</body>', tag+'</body>')
+          tags=['<script src="coat-item.js"></script>','<script src="wardrobe-items-aug27.js"></script>']
+          marker='<script src="wardrobe-editor-v2.js"></script>'
+          changed=False
+          for tag in tags:
+              if tag not in s:
+                  if marker in s:
+                      s=s.replace(marker, marker+tag)
+                  else:
+                      s=s.replace('</body>', tag+'</body>')
+                  changed=True
+          if changed:
               p.write_text(s,encoding='utf-8')
           PY
             git add index.html
             if git diff --cached --quiet; then
-              echo 'Coat script is already loaded.'
+              echo 'Wardrobe scripts are already loaded.'
               exit 0
             fi
-            git commit -m 'Load gray coat'
+            git commit -m 'Load new wardrobe items'
             if git push origin HEAD:main; then
-              echo 'Coat script loaded successfully.'
+              echo 'Wardrobe scripts loaded successfully.'
               exit 0
             fi
             echo "Push race on attempt $attempt; retrying..."
